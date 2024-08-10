@@ -6,7 +6,7 @@ import torch_geometric.transforms as T
 
 # import custom encodings
 from torchvision.transforms import Compose
-from custom_encodings import ShortestPathGenerator, OneHotEdgeAttr, LocalCurvatureProfile, AltLocalCurvatureProfile
+from custom_encodings import LocalCurvatureProfile, AltLocalCurvatureProfile
 
 from experiments.graph_regression import Experiment
 
@@ -218,20 +218,6 @@ default_args = AttrDict({
 })
 
 hyperparams = {"zinc": AttrDict({"output_dim": 1})}
-
-"""
-hyperparams = {
-    "mutag": AttrDict({"output_dim": 2}),
-    "enzymes": AttrDict({"output_dim": 6}),
-    "proteins": AttrDict({"output_dim": 2}),
-    "collab": AttrDict({"output_dim": 3}),
-    "imdb": AttrDict({"output_dim": 2}),
-    "reddit": AttrDict({"output_dim": 2}),
-    "peptides": AttrDict({"output_dim": 10}),
-    "pascal": AttrDict({"output_dim": 20}),
-    "coco": AttrDict({"output_dim": 80})
-}
-"""
 
 results = []
 args = default_args
@@ -468,10 +454,12 @@ for key in datasets:
     end = time.time()
     run_duration = end - start
 
+    """
     # pickle the graph dictionary in a new file depending on the dataset and layer type
     with open(f"results/graph_dict_{key}_{args.layer_type}_{args.rewiring}_{args.encoding}.pkl", "wb") as f:
         pickle.dump(graph_dict, f)
         print(f"Graph dictionary for {key} pickled")
+    """
 
     train_mean = np.mean(train_accuracies)
     val_mean = np.mean(validation_accuracies)
