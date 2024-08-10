@@ -73,13 +73,13 @@ class Experiment:
                 self.args.edge_dim = self.dataset[0].edge_attr.shape[1]
             except:
                 self.args.edge_dim = 1
-            self.model = GINE().to(self.args.device)
+            self.model = GINE(self.args).to(self.args.device)
         elif self.args.layer_type == "MLM":
             try:
                 self.args.edge_dim = self.dataset[0].edge_attr.shape[1]
             except:
                 self.args.edge_dim = 1
-            self.model = MLM().to(self.args.device)
+            self.model = MLM(self.args).to(self.args.device)
         else:
             self.model = GNN(self.args).to(self.args.device)
        
