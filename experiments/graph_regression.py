@@ -128,7 +128,8 @@ class Experiment:
                 graph = graph.to(self.args.device)
                 y = graph.y.to(self.args.device)
 
-                out = self.model(graph.x, graph.edge_index, graph.edge_attr, graph.batch)
+                # out = self.model(graph.x, graph.edge_index, graph.edge_attr, graph.batch)
+                out = self.model(graph)
                 # loss = self.loss_fn(input=out, target=y)
                 loss = (out.squeeze() - y).abs().mean()
                 total_loss += loss
