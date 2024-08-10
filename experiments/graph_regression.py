@@ -219,7 +219,8 @@ class Experiment:
             for graph in loader:
                 graph = graph.to(self.args.device)
                 y = graph.y.to(self.args.device)
-                out = self.model(graph.x, graph.edge_index, graph.edge_attr, graph.batch)
+                # out = self.model(graph.x, graph.edge_index, graph.edge_attr, graph.batch)
+                out = self.model(graph)
                 # _, pred = out.max(dim=1)
                 total_mae += (out.squeeze() - y).abs().sum().item()
                 
