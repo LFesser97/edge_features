@@ -6,7 +6,7 @@ import torch_geometric.transforms as T
 
 # import custom encodings
 from torchvision.transforms import Compose
-from custom_encodings import LocalCurvatureProfile, AltLocalCurvatureProfile
+from custom_encodings import LocalCurvatureProfile, AltLocalCurvatureProfile, EdgeCurvature
 
 from experiments.graph_regression import Experiment
 
@@ -50,14 +50,6 @@ def log_to_file(message, filename="results/graph_regression.txt"):
     file = open(filename, "a")
     file.write(message)
     file.close()
-
-def _convert_lrgb(dataset: torch.Tensor) -> torch.Tensor:
-    x = dataset[0]
-    edge_attr = dataset[1]
-    edge_index = dataset[2]
-    y = dataset[3]
-
-    return Data(x = x, edge_index = edge_index, y = y, edge_attr = edge_attr)
 
 class SelectiveEncoding:
     """
@@ -239,7 +231,7 @@ for key in datasets:
     
     
     # encode the dataset using the given encoding, if args.encoding is not None
-    if args.encoding in ["LAPE", "RWPE", "LCP", "LDP", "SUB", "EGO", "VN", "VN-k", "S-LCP"]:
+    if args.encoding in ["LAPE", "RWPE", "LCP", "LDP", "SUB", "EGO", "VN", "VN-k", "S-LCP", "E-LCP"]:
 
         if os.path.exists(f"data/{key}_{args.encoding}.pt"):
             print('ENCODING ALREADY COMPLETED...')
@@ -248,6 +240,14 @@ for key in datasets:
         elif args.encoding == "LCP":
             print('ENCODING STARTED...')
             lcp = LocalCurvatureProfile()
+            for i in range(len(dataset)):
+                dataset[i] = lcp.compute_orc(dataset[i])
+                print(f"Graph {i} of {len(dataset)} encoded with {args.encoding}")
+            torch.save(dataset, f"data/{key}_{args.encoding}.pt")
+
+        elif args.encoding == "E-LCP":
+            print('ENCODING STARTED...')
+            lcp = EdgeCurvature()
             for i in range(len(dataset)):
                 dataset[i] = lcp.compute_orc(dataset[i])
                 print(f"Graph {i} of {len(dataset)} encoded with {args.encoding}")
@@ -429,15 +429,7 @@ for key in datasets:
     rewiring_duration = end - start
 
     print('REWIRING COMPLETED...')
-
-    # create a dictionary of the graphs in the dataset with the key being the graph index
-    graph_dict = {}
-    for i in range(len(dataset)):
-       graph_dict[i] = []
-    print('GRAPH DICTIONARY CREATED...') 
-
     
-    #spectral_gap = average_spectral_gap(dataset)
     print('TRAINING STARTED...')
     start = time.time()
 
@@ -448,18 +440,8 @@ for key in datasets:
         validation_accuracies.append(validation_acc)
         test_accuracies.append(test_acc)
         energies.append(energy)
-        for name in dictionary.keys():
-            if dictionary[name] != -1:
-                graph_dict[name].append(dictionary[name])
     end = time.time()
     run_duration = end - start
-
-    """
-    # pickle the graph dictionary in a new file depending on the dataset and layer type
-    with open(f"results/graph_dict_{key}_{args.layer_type}_{args.rewiring}_{args.encoding}.pkl", "wb") as f:
-        pickle.dump(graph_dict, f)
-        print(f"Graph dictionary for {key} pickled")
-    """
 
     train_mean = np.mean(train_accuracies)
     val_mean = np.mean(validation_accuracies)
@@ -475,6 +457,7 @@ for key in datasets:
     results.append({
         "dataset": key,
         "rewiring": args.rewiring,
+        "encoding": args.encoding,
         "layer_type": args.layer_type,
         "num_iterations": args.num_iterations,
         "borf_batch_add" : args.borf_batch_add,

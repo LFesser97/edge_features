@@ -6,7 +6,7 @@ import torch_geometric.transforms as T
 
 # import custom encodings
 from torchvision.transforms import Compose
-from custom_encodings import LocalCurvatureProfile, AltLocalCurvatureProfile
+from custom_encodings import LocalCurvatureProfile, AltLocalCurvatureProfile, EdgeCurvature
 
 from experiments.graph_classification import Experiment
 
@@ -24,14 +24,6 @@ import wget
 import zipfile
 import os
 
-def _convert_lrgb(dataset: torch.Tensor) -> torch.Tensor:
-    x = dataset[0]
-    edge_attr = dataset[1]
-    edge_index = dataset[2]
-    y = dataset[3]
-
-    return Data(x = x, edge_index = edge_index, y = y, edge_attr = edge_attr)
-
 
 mutag = list(TUDataset(root="data", name="MUTAG"))
 enzymes = list(TUDataset(root="data", name="ENZYMES"))
@@ -40,27 +32,6 @@ imdb = list(TUDataset(root="data", name="IMDB-BINARY"))
 collab = list(TUDataset(root="data", name="COLLAB"))
 reddit = list(TUDataset(root="data", name="REDDIT-BINARY"))
 
-"""
-# load peptides dataset from url to the current directory using os and wget
-peptides_url = "https://www.dropbox.com/s/ycsq37q8sxs1ou8/peptidesfunc.zip?dl=1"
-peptides_zip_filepath = os.getcwd()
-
-wget.download(peptides_url, peptides_zip_filepath)
-pepties_zip = os.path.join(peptides_zip_filepath, "peptidesfunc.zip")
-
-with zipfile.ZipFile(pepties_zip, 'r') as zip_ref:
-    zip_ref.extractall(peptides_zip_filepath)
-
-peptides_train = torch.load(os.path.join(peptides_zip_filepath, "peptidesfunc", "train.pt"))
-peptides_val = torch.load(os.path.join(peptides_zip_filepath, "peptidesfunc", "val.pt"))
-peptides_test = torch.load(os.path.join(peptides_zip_filepath, "peptidesfunc", "test.pt"))
-
-peptides = [_convert_lrgb(peptides_train[i]) for i in range(len(peptides_train))] + [_convert_lrgb(peptides_val[i]) for i in range(len(peptides_val))] + [_convert_lrgb(peptides_test[i]) for i in range(len(peptides_test))]
-"""
-
-# datasets = {"mutag": mutag, "enzymes": enzymes, "proteins": proteins, "imdb": imdb, "peptides": peptides}
-# datasets = {"mutag": mutag, "enzymes": enzymes, "proteins": proteins, "imdb": imdb,
-            # "collab": collab, "reddit": reddit}
 datasets = {"mutag": mutag, "enzymes": enzymes, "proteins": proteins, "imdb": imdb}
 
 num_vns = 2
@@ -228,7 +199,7 @@ default_args = AttrDict({
     "learning_rate": 1e-3,
     "layer_type": "R-GCN",
     "display": True,
-    "num_trials": 400,
+    "num_trials": 100,
     "eval_every": 1,
     "rewiring": None,
     "num_iterations": 40,
@@ -250,10 +221,7 @@ hyperparams = {
     "proteins": AttrDict({"output_dim": 2}),
     "collab": AttrDict({"output_dim": 3}),
     "imdb": AttrDict({"output_dim": 2}),
-    "reddit": AttrDict({"output_dim": 2}),
-    "peptides": AttrDict({"output_dim": 10}),
-    "pascal": AttrDict({"output_dim": 20}),
-    "coco": AttrDict({"output_dim": 80})
+    "reddit": AttrDict({"output_dim": 2})
 }
 
 results = []
@@ -276,7 +244,7 @@ for key in datasets:
     
     
     # encode the dataset using the given encoding, if args.encoding is not None
-    if args.encoding in ["LAPE", "RWPE", "LCP", "LDP", "SUB", "EGO", "VN", "VN-k", "S-LCP"]:
+    if args.encoding in ["LAPE", "RWPE", "LCP", "LDP", "SUB", "EGO", "VN", "VN-k", "S-LCP", "E-LCP"]:
 
         if os.path.exists(f"data/{key}_{args.encoding}.pt"):
             print('ENCODING ALREADY COMPLETED...')
@@ -285,6 +253,14 @@ for key in datasets:
         elif args.encoding == "LCP":
             print('ENCODING STARTED...')
             lcp = LocalCurvatureProfile()
+            for i in range(len(dataset)):
+                dataset[i] = lcp.compute_orc(dataset[i])
+                print(f"Graph {i} of {len(dataset)} encoded with {args.encoding}")
+            torch.save(dataset, f"data/{key}_{args.encoding}.pt")
+
+        elif args.encoding == "E-LCP":
+            print('ENCODING STARTED...')
+            lcp = EdgeCurvature()
             for i in range(len(dataset)):
                 dataset[i] = lcp.compute_orc(dataset[i])
                 print(f"Graph {i} of {len(dataset)} encoded with {args.encoding}")
@@ -466,13 +442,6 @@ for key in datasets:
     rewiring_duration = end - start
 
     print('REWIRING COMPLETED...')
-
-    # create a dictionary of the graphs in the dataset with the key being the graph index
-    graph_dict = {}
-    for i in range(len(dataset)):
-       graph_dict[i] = []
-    print('GRAPH DICTIONARY CREATED...') 
-
     
     #spectral_gap = average_spectral_gap(dataset)
     print('TRAINING STARTED...')
@@ -483,37 +452,8 @@ for key in datasets:
         validation_accuracies.append(validation_acc)
         test_accuracies.append(test_acc)
         energies.append(energy)
-        for name in dictionary.keys():
-            if dictionary[name] != -1:
-                graph_dict[name].append(dictionary[name])
     end = time.time()
     run_duration = end - start
-
-    # pickle the graph dictionary in a new file depending on the number of layers 
-    # if args.num_layers == 4:
-        # with open(f"new_results/{key}_{args.layer_type}_{args.encoding}_graph_dict.pickle", "wb") as f:
-           # pickle.dump(graph_dict, f)
-        # print(f"Graph dictionary for {key} pickled")
-
-    # else:
-    
-    # if args.encoding == 'VN-k':
-        # with open(f"results/{args.num_layers}_layers/{key}_{args.layer_type}_{args.encoding}_{num_vns}_graph_dict.pickle", "wb") as f:
-            # pickle.dump(graph_dict, f)
-            # print(f"Graph dictionary for {key} pickled")
-    if args.rewiring is None:
-        with open(f"results/{args.num_layers}_layers/{key}_{args.layer_type}_{args.encoding}_graph_dict.pickle", "wb") as f:
-            pickle.dump(graph_dict, f)
-        print(f"Graph dictionary for {key} pickled")
-    else:
-        with open(f"results/{args.num_layers}_layers/{key}_{args.layer_type}_{args.rewiring}_graph_dict.pickle", "wb") as f:
-            pickle.dump(graph_dict, f)
-        print(f"Graph dictionary for {key} pickled")
-
-    # check if the hidden dimension is not 64
-    if args.hidden_dim != 64:
-        with open(f"results/{args.num_layers}_layers/{key}_{args.layer_type}_{args.hidden_dim}_hidden_dim_graph_dict.pickle", "wb") as f:
-            pickle.dump(graph_dict, f)
 
     train_mean = 100 * np.mean(train_accuracies)
     val_mean = 100 * np.mean(validation_accuracies)
@@ -529,6 +469,7 @@ for key in datasets:
     results.append({
         "dataset": key,
         "rewiring": args.rewiring,
+        "encoding": args.encoding,
         "layer_type": args.layer_type,
         "num_iterations": args.num_iterations,
         "borf_batch_add" : args.borf_batch_add,
