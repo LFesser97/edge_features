@@ -223,7 +223,8 @@ class GINE(torch.nn.Module):
     def get_layer(self, in_features, out_features):
         return GINEConv(nn.Sequential(nn.Linear(in_features, out_features),nn.BatchNorm1d(out_features), nn.ReLU(),nn.Linear(out_features, out_features)), edge_dim=self.edge_dim)
 
-    def forward(self, x, edge_index, edge_attr, batch):
+    def forward(self, graph):
+        x, edge_index, edge_attr, batch = graph.x, graph.edge_index, graph.edge_attr, graph.batch
         for i, layer in enumerate(self.layers):
             x_new = layer(x.float(), edge_index, edge_attr.float())
             if i != (self.num_layers - 1):
