@@ -32,7 +32,8 @@ imdb = list(TUDataset(root="data", name="IMDB-BINARY"))
 collab = list(TUDataset(root="data", name="COLLAB"))
 reddit = list(TUDataset(root="data", name="REDDIT-BINARY"))
 
-datasets = {"mutag": mutag, "enzymes": enzymes, "proteins": proteins, "imdb": imdb}
+# datasets = {"mutag": mutag, "enzymes": enzymes, "proteins": proteins, "imdb": imdb}
+datasets = {"enzymes": enzymes, "proteins": proteins, "imdb": imdb}
 
 num_vns = 2
 
