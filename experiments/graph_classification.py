@@ -71,10 +71,16 @@ class Experiment:
         if self.args.layer_type == "GPS":
             self.model = GPS(self.args).to(self.args.device)
         elif self.args.layer_type == "GINE":
-            self.args.edge_dim = self.dataset[0].edge_attr.shape[1]
+            try:
+                self.args.edge_dim = self.dataset[0].edge_attr.shape[1]
+            except:
+                self.args.edge_dim = 1
             self.model = GINE(self.args).to(self.args.device)
         elif self.args.layer_type == "MLM":
-            self.args.edge_dim = self.dataset[0].edge_attr.shape[1]
+            try:
+                self.args.edge_dim = self.dataset[0].edge_attr.shape[1]
+            except:
+                self.args.edge_dim = 1
             self.model = MLM(self.args).to(self.args.device)
         else:
             self.model = GNN(self.args).to(self.args.device)
