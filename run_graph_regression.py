@@ -441,7 +441,7 @@ for key in datasets:
         print(f"Trial {trial + 1} of {args.num_trials}")
         train_acc, validation_acc, test_acc, energy, dictionary = Experiment(args=args, dataset=dataset,
                                                                             train_dataset=dataset[:train_length],
-                                                                            val_dataset=dataset[train_length:train_length + val_length],
+                                                                            validation_dataset=dataset[train_length:train_length + val_length],
                                                                             test_dataset=dataset[train_length + val_length:]).run()
         train_accuracies.append(train_acc)
         validation_accuracies.append(validation_acc)
