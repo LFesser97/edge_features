@@ -30,6 +30,10 @@ train_dataset = ZINC(path, subset=True, split='train')
 val_dataset = ZINC(path, subset=True, split='val')
 test_dataset = ZINC(path, subset=True, split='test')
 
+train_length = len(train_dataset)
+val_length = len(val_dataset)
+test_length = len(test_dataset)
+
 zinc = [train_dataset[i] for i in range(len(train_dataset))] + [val_dataset[i] for i in range(len(val_dataset))] + [test_dataset[i] for i in range(len(test_dataset))]
 
 datasets = {"zinc": zinc}
@@ -435,7 +439,10 @@ for key in datasets:
 
     for trial in range(args.num_trials):
         print(f"Trial {trial + 1} of {args.num_trials}")
-        train_acc, validation_acc, test_acc, energy, dictionary = Experiment(args=args, dataset=dataset).run()
+        train_acc, validation_acc, test_acc, energy, dictionary = Experiment(args=args, dataset=dataset,
+                                                                            train_dataset=dataset[:train_length],
+                                                                            val_dataset=dataset[train_length:train_length + val_length],
+                                                                            test_dataset=dataset[train_length + val_length:]).run()
         train_accuracies.append(train_acc)
         validation_accuracies.append(validation_acc)
         test_accuracies.append(test_acc)
